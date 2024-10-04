@@ -44,25 +44,27 @@ class SapiensDepth():
                  type: SapiensDepthType = SapiensDepthType.DEPTH_03B,
                  device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
                  dtype: torch.dtype = torch.float32):
+        # Path to the model file
         path = '/content/models/sapiens_1b_normal_render_people_epoch_115_torchscript.pt2'
         
-        # Try loading as a regular PyTorch model first, then fall back to TorchScript
+        # Load as a standard PyTorch model
         try:
             self.model = torch.load(path, map_location=device)
             print("Loaded model as a standard PyTorch model.")
-        except Exception:
-            self.model = torch.jit.load(path, map_location=device)
-            print("Loaded model as a TorchScript model.")
+        except Exception as e:
+            print("Failed to load model:", e)
+            raise RuntimeError("Ensure that the model file is correctly downloaded and compatible.")
         
-        self.model.eval()
+        self.model.eval()  # Set to evaluation mode
         self.device = device
         self.dtype = dtype
-        self.preprocessor = create_preprocessor(input_size=(1024, 768))
+        self.preprocessor = create_preprocessor(input_size=(1024, 768))  # Initialize the preprocessor
 
     def __call__(self, img: np.ndarray) -> np.ndarray:
+        # Existing inference code for processing the input image
         start = time.perf_counter()
-
-        # Model expects BGR, but we change to RGB here because the preprocessor will switch the channels also
+        
+        # Convert image to RGB if required by the model
         input = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         tensor = self.preprocessor(input).to(self.device).to(self.dtype)
 
