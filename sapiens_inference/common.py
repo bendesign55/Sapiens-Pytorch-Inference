@@ -46,17 +46,30 @@ def download_hf_model(model_filename: str, task: TaskType) -> str:
     if not url:
         raise ValueError(f"No URL found for model {model_filename}")
 
+    # Download to a specific directory
     model_dir = "./models"
     os.makedirs(model_dir, exist_ok=True)
+    zip_path = os.path.join(model_dir, model_filename + ".zip")
     model_path = os.path.join(model_dir, model_filename)
 
-    # Check if model already exists and is non-zero size
-    if not os.path.exists(model_path) or os.path.getsize(model_path) == 0:
+    # Download the file if it doesn't already exist
+    if not os.path.exists(model_path):
         print(f"Downloading {model_filename} from {url}...")
         response = requests.get(url, stream=True)
-        with open(model_path, "wb") as model_file:
+        with open(zip_path, "wb") as model_file:
             model_file.write(response.content)
-        print(f"Downloaded {model_filename} to {model_path}")
+        print(f"Downloaded to {zip_path}")
+
+        # Check if the downloaded file is a ZIP archive and extract it
+        if zipfile.is_zipfile(zip_path):
+            print("Extracting ZIP archive...")
+            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+                zip_ref.extractall(model_dir)
+            os.remove(zip_path)  # Remove the ZIP file after extraction
+            print(f"Extracted model to {model_dir}")
+        else:
+            # If not a ZIP, rename it directly to model_path
+            os.rename(zip_path, model_path)
     else:
         print(f"Model {model_filename} already exists at {model_path}")
 
