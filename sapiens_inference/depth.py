@@ -44,13 +44,20 @@ class SapiensDepth():
                  type: SapiensDepthType = SapiensDepthType.DEPTH_03B,
                  device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
                  dtype: torch.dtype = torch.float32):
-        path = download_hf_model(type.value, TaskType.DEPTH)
-        model = torch.jit.load(path)
-        model = model.eval()
-        self.model = model.to(device).to(dtype)
+        path = '/content/models/sapiens_1b_normal_render_people_epoch_115_torchscript.pt2'
+        
+        # Try loading as a regular PyTorch model first, then fall back to TorchScript
+        try:
+            self.model = torch.load(path, map_location=device)
+            print("Loaded model as a standard PyTorch model.")
+        except Exception:
+            self.model = torch.jit.load(path, map_location=device)
+            print("Loaded model as a TorchScript model.")
+        
+        self.model.eval()
         self.device = device
         self.dtype = dtype
-        self.preprocessor = create_preprocessor(input_size=(1024, 768))  # Only these values seem to work well
+        self.preprocessor = create_preprocessor(input_size=(1024, 768))
 
     def __call__(self, img: np.ndarray) -> np.ndarray:
         start = time.perf_counter()
