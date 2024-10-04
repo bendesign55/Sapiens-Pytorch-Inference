@@ -34,27 +34,35 @@ def download(url: str, filename: str):
                     pb.update(len(chunk))
                     f.write(chunk)
 
+def download_hf_model(model_filename: str, task: TaskType) -> str:
+    # Define HuggingFace direct download URLs based on model types
+    hf_links = {
+        "sapiens_0.3b_render_people_epoch_100_torchscript.pt2": "https://huggingface.co/facebook/sapiens-depth-03b/resolve/main/sapiens_0.3b_depth_render_people_epoch_100.pth",
+        "sapiens_0.6b_render_people_epoch_70_torchscript.pt2": "https://huggingface.co/facebook/sapiens-depth-06b/resolve/main/sapiens_0.6b_depth_render_people_epoch_70.pth",
+        "sapiens_1b_render_people_epoch_88_torchscript.pt2": "https://huggingface.co/facebook/sapiens-normal-1b/resolve/main/sapiens_1b_normal_render_people_epoch_115.pth",
+        "sapiens_2b_render_people_epoch_25_torchscript.pt2": "https://huggingface.co/facebook/sapiens-depth-2b/resolve/main/sapiens_2b_depth_render_people_epoch_25.pth"
+    }
+    
+    url = hf_links.get(model_filename)
+    if not url:
+        raise ValueError(f"No URL found for model {model_filename}")
+    
+    # Download the model
+    model_dir = "./models"
+    os.makedirs(model_dir, exist_ok=True)
+    model_path = os.path.join(model_dir, model_filename)
 
-def download_hf_model(model_name: str, task_type: TaskType, model_dir: str = 'models'):
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
+    if not os.path.exists(model_path):
+        print(f"Downloading {model_filename} from {url}...")
+        response = requests.get(url, stream=True)
+        with open(model_path, "wb") as model_file:
+            model_file.write(response.content)
+        print(f"Downloaded {model_filename} to {model_path}")
+    else:
+        print(f"Model {model_filename} already exists at {model_path}")
+    
+    return model_path
 
-    path = model_dir + "/" + model_name
-    if os.path.exists(path):
-        return path
-
-    print(f"Model {model_name} not found, downloading from Hugging Face Hub...")
-
-    model_version = "_".join(model_name.split("_")[:2])
-    repo_id = "facebook/sapiens"
-    subdirectory = f"sapiens_lite_host/torchscript/{task_type.value}/checkpoints/{model_version}"
-
-    # hf_hub_download(repo_id=repo_id, filename=model_name, subfolder=subdirectory, local_dir=model_dir)
-    url = hf_hub_url(repo_id=repo_id, filename=model_name, subfolder=subdirectory)
-    download(url, path)
-    print("Model downloaded successfully to", path)
-
-    return path
 
 
 def create_preprocessor(input_size: tuple[int, int],
